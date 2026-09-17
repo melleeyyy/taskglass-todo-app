@@ -81,8 +81,25 @@
     const diff = Math.round((d - new Date(today + "T00:00")) / 86400000);
     if (diff === -1) return "Yesterday";
     if (diff === 1) return "Tomorrow";
+    if (diff > 1 && diff <= 6 && inSameWeek(t.due)) return "This week";
     return d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) + (t.dueTime ? ` · ${t.dueTime}` : "");
   }
+
+  /* start of the current week, respecting the "week starts on" setting */
+  function weekStartStr() {
+    const d = new Date();
+    const ws = +settings.weekStart; // 1 = Monday, 0 = Sunday
+    const diff = (d.getDay() - ws + 7) % 7;
+    d.setDate(d.getDate() - diff);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  const inSameWeek = (due) => {
+    const ws = weekStartStr();
+    const end = new Date(ws + "T00:00");
+    end.setDate(end.getDate() + 6);
+    const e = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+    return due >= ws && due <= e;
+  };
 
   /* ---------------- Audio (WebAudio beeps) ---------------- */
   let audioCtx = null;
@@ -90,6 +107,7 @@
     if (!settings.sound) return;
     try {
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
       const o = audioCtx.createOscillator(), g = audioCtx.createGain();
       o.connect(g); g.connect(audioCtx.destination);
       const freqs = { click: 600, success: [523, 784], error: 220 };
@@ -175,7 +193,9 @@
 
     const isDark = document.documentElement.dataset.theme === "dark";
     $("#quickThemeIcon").textContent = isDark ? "🌙" : "☀️";
-    $("#quickThemeLabel").textContent = isDark ? "Dark Mode" : "Light Mode";
+    $("#quickThemeLabel").textContent = isDark ? "Dark mode" : "Light mode";
+    const meta = $("#metaThemeColor");
+    if (meta) meta.content = isDark ? "#0b1020" : "#e8ecf9";
 
     $("#glassValue").textContent = settings.glass;
     $("#radiusValue").textContent = settings.radius;
@@ -223,6 +243,7 @@
     $("#countUpcoming").textContent = upcoming;
     $("#countImportant").textContent = imp;
     $("#countCompleted").textContent = done;
+    $("#btnClearDone").style.display = done ? "inline-flex" : "none";
 
     const pct = total ? Math.round((done / total) * 100) : 0;
     $("#progressPercent").textContent = pct + "%";
@@ -299,33 +320,61 @@
     return list;
   }
 
+  /* drag-reorder is only valid when the list shows every task in manual order */
+  function canReorder() {
+    return state.sort === "manual" && state.filter === "all" && !state.search &&
+      (state.view === "all" || state.view.startsWith("cat:"));
+  }
+
+  function updateEmptyState(count) {
+    const empty = $("#emptyState");
+    empty.classList.toggle("show", count === 0);
+    if (count) return;
+    const map = {
+      today:      ["🌤️", "All clear for today", "Nothing due today. Enjoy or plan ahead!"],
+      upcoming:  ["🚀", "No upcoming tasks", "Tasks with a future due date will appear here."],
+      important: ["⭐", "No important tasks", "Star a task to keep it on your radar."],
+      completed: ["🎯", "Nothing completed yet", "Finished tasks land here — go finish one!"],
+      all:       ["🌤️", "Nothing here yet", "Tap the + button or press N to add your first task."],
+    };
+    let entry = map[state.view];
+    if (!entry && state.view.startsWith("cat:")) entry = ["🏷️", "Empty category", "No tasks in this category yet."];
+    if (!entry) entry = map.all;
+    if (state.search) entry = ["🔍", "No matching tasks", `Nothing found for "${state.search}".`];
+    $(".empty-ico").textContent = entry[0];
+    $("#emptyTitle").textContent = entry[1];
+    $("#emptyText").textContent = entry[2];
+  }
+
+  const PRI_LABEL = { low: "Low", medium: "Med", high: "High" };
+
   function renderTasks() {
     const list = visibleTasks();
     const ul = $("#taskList");
-    const empty = $("#emptyState");
-    empty.classList.toggle("show", list.length === 0);
+    updateEmptyState(list.length);
+    const reorderable = canReorder();
 
     ul.innerHTML = list.map(t => {
       const cat = categories.find(c => c.id === t.category);
       const dueTxt = fmtDue(t);
       const overdueCls = isOverdue(t) ? "overdue" : isToday(t) && !t.completed ? "today" : "";
-      return `<li class="task-item glass ${t.completed ? "completed" : ""}" data-id="${t.id}" draggable="${state.sort === "manual"}">
-        <span class="task-drag" title="Drag to reorder">⋮⋮</span>
-        <button class="task-check" data-toggle="${t.id}" title="Toggle complete">${t.completed ? "✓" : ""}</button>
+      return `<li class="task-item glass ${t.completed ? "completed" : ""}" data-id="${t.id}" draggable="${reorderable}">
+        ${reorderable ? `<span class="task-drag" title="Drag to reorder">⋮⋮</span>` : ""}
+        <button class="task-check" data-toggle="${t.id}" title="Toggle complete" aria-label="Mark complete">${t.completed ? "✓" : ""}</button>
         <div class="task-body">
           <div class="task-title">${esc(t.title)}</div>
           ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ""}
           <div class="task-meta">
             ${cat ? `<span class="tag tag-cat" style="--cat:${cat.color}">● ${esc(cat.name)}</span>` : ""}
-            <span class="tag tag-pri-${t.priority}">${{low: "Low", medium: "Med", high: "High"}[t.priority]}</span>
+            ${t.starred ? `<span class="tag tag-star">⭐ Important</span>` : ""}
+            <span class="tag tag-pri-${t.priority}">${PRI_LABEL[t.priority] || "Med"}</span>
             ${dueTxt ? `<span class="tag tag-due ${overdueCls}">🗓 ${dueTxt}${isOverdue(t) ? " · overdue" : ""}</span>` : ""}
           </div>
         </div>
-        ${t.starred ? `<span class="task-star" title="Important">⭐</span>` : ""}
         <div class="task-actions">
-          <button class="icon-btn" data-star="${t.id}" title="Important">${t.starred ? "★" : "☆"}</button>
-          <button class="icon-btn" data-edit="${t.id}" title="Edit">✏️</button>
-          <button class="icon-btn" data-del="${t.id}" title="Delete">🗑</button>
+          <button class="icon-btn" data-star="${t.id}" title="${t.starred ? "Remove importance" : "Mark important"}" aria-label="Toggle important">${t.starred ? "★" : "☆"}</button>
+          <button class="icon-btn" data-edit="${t.id}" title="Edit task" aria-label="Edit task">✏️</button>
+          <button class="icon-btn" data-del="${t.id}" title="Delete task" aria-label="Delete task">🗑</button>
         </div>
       </li>`;
     }).join("");
@@ -365,7 +414,10 @@
     $("#taskDueTime").value = t ? (t.dueTime || "") : "";
     $("#taskStarred").checked = t ? !!t.starred : false;
     openModal("taskModal");
-    setTimeout(() => $("#taskTitle").focus(), 60);
+    setTimeout(() => {
+      // only focus if the modal is still open (it may have been closed meanwhile)
+      if ($("#taskModal").classList.contains("open")) $("#taskTitle").focus();
+    }, 60);
   }
 
   function submitTask(e) {
@@ -421,8 +473,9 @@
 
   /* ---------------- Drag reorder ---------------- */
   function onDragStart(e) {
+    if (!canReorder()) return;
     const li = e.target.closest(".task-item");
-    if (!li) return;
+    if (!li || !li.draggable) return;
     state.draggingId = li.dataset.id;
     li.classList.add("dragging");
     e.dataTransfer.effectAllowed = "move";
@@ -432,13 +485,13 @@
     if (!state.draggingId) return;
     e.preventDefault();
     const li = e.target.closest(".task-item");
-    $$(".task-item").forEach(el => el.style.borderTop = "");
-    if (li && li.dataset.id !== state.draggingId) li.style.borderTop = "2px solid var(--accent)";
+    $$(".task-item").forEach(el => el.classList.remove("drop-target"));
+    if (li && li.dataset.id !== state.draggingId) li.classList.add("drop-target");
   }
   function onDrop(e) {
     e.preventDefault();
     const target = e.target.closest(".task-item");
-    $$(".task-item").forEach(el => { el.style.borderTop = ""; el.classList.remove("dragging"); });
+    $$(".task-item").forEach(el => { el.classList.remove("dragging", "drop-target"); });
     if (!target || !state.draggingId || target.dataset.id === state.draggingId) return;
     const from = tasks.findIndex(t => t.id === state.draggingId);
     const to = tasks.findIndex(t => t.id === target.dataset.id);
@@ -471,8 +524,14 @@
   }
 
   /* ---------------- Modals ---------------- */
-  function openModal(id) { $("#" + id).classList.add("open"); }
-  function closeModal(id) { $("#" + id).classList.remove("open"); }
+  function openModal(id) {
+    $("#" + id).classList.add("open");
+    document.body.classList.add("modal-open");
+  }
+  function closeModal(id) {
+    $("#" + id).classList.remove("open");
+    if (!document.querySelector(".modal-overlay.open")) document.body.classList.remove("modal-open");
+  }
 
   /* ---------------- Notifications ---------------- */
   let notified = new Set();
@@ -497,7 +556,6 @@
       b.classList.toggle("active", b.dataset.value === settings.theme);
       b.onclick = () => {
         settings.theme = b.dataset.value;
-        if (settings.theme === "system" || settings.notifications) { /* noop */ }
         saveSettings(); applySettings(); initSettingsUI();
         playSound("click");
       };
@@ -597,7 +655,11 @@
   }
 
   /* ---------------- Event wiring ---------------- */
+  let booted = false;
   function init() {
+    if (booted) return; // guard against double DOMContentLoaded / double script include
+    booted = true;
+
     // nav
     $("#nav").addEventListener("click", (e) => {
       const btn = e.target.closest(".nav-item");
@@ -640,16 +702,40 @@
       render(); playSound("click");
     });
 
-    // search & sort
-    $("#searchInput").addEventListener("input", (e) => { state.search = e.target.value; render(); });
+    // search & sort (search debounced for smooth typing)
+    let searchTimer = null;
+    $("#searchInput").addEventListener("input", (e) => {
+      const v = e.target.value;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => { state.search = v; render(); }, 120);
+    });
     $("#sortSelect").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
 
-    // modal closers
-    $$("[data-close]").forEach(b => b.onclick = () => closeModal(b.dataset.close));
-    $$(".modal-overlay").forEach(ov => ov.addEventListener("click", (e) => { if (e.target === ov) ov.classList.remove("open"); }));
+    // modal closers (single helper keeps the page scroll-lock in sync)
+    const closeOverlay = (ov) => {
+      ov.classList.remove("open");
+      if (!document.querySelector(".modal-overlay.open")) document.body.classList.remove("modal-open");
+    };
+    $$("[data-close]").forEach(b => b.onclick = () => closeOverlay($("#" + b.dataset.close)));
+    $$(".modal-overlay").forEach(ov => ov.addEventListener("click", (e) => { if (e.target === ov) closeOverlay(ov); }));
+
+    // keyboard shortcuts
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") $$(".modal-overlay.open").forEach(m => m.classList.remove("open"));
-      if (e.key.toLowerCase() === "n" && !/input|textarea|select/i.test(document.activeElement.tagName) && !$(".modal-overlay.open")) { e.preventDefault(); openTaskModal(); }
+      const typing = /input|textarea|select/i.test(document.activeElement.tagName);
+      if (e.key === "Escape") {
+        $$(".modal-overlay.open").forEach(closeOverlay);
+        $("#sidebar").classList.remove("open");
+      }
+      if (e.key.toLowerCase() === "n" && !typing && !$(".modal-overlay.open")) { e.preventDefault(); openTaskModal(); }
+      if (e.key === "/" && !typing) { e.preventDefault(); $("#searchInput").focus(); }
+    });
+
+    // close mobile sidebar when tapping outside it
+    document.addEventListener("click", (e) => {
+      const sb = $("#sidebar");
+      if (sb.classList.contains("open") && !sb.contains(e.target) && !$("#btnSidebarToggle").contains(e.target)) {
+        sb.classList.remove("open");
+      }
     });
 
     // forms
@@ -665,6 +751,16 @@
     $("#importFile").onchange = (e) => { if (e.target.files[0]) importData(e.target.files[0]); e.target.value = ""; };
     $("#btnReset").onclick = resetAll;
     $("#btnSidebarToggle").onclick = () => $("#sidebar").classList.toggle("open");
+
+    // clear all completed tasks
+    $("#btnClearDone").onclick = () => {
+      const done = tasks.filter(t => t.completed).length;
+      if (!done) return toast("No completed tasks to clear");
+      if (settings.confirmDelete && !confirm(`Delete all ${done} completed task${done === 1 ? "" : "s"}?`)) return;
+      tasks = tasks.filter(t => !t.completed);
+      saveTasks(); render(); playSound("click");
+      toast(`Cleared ${done} completed task${done === 1 ? "" : "s"} 🧹`, "success");
+    };
 
     // quick theme toggle (matches settings segmented)
     $("#btnQuickTheme").onclick = () => {
