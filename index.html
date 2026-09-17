@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TaskGlass — Elegant To-Do App</title>
-  <meta name="description" content="A beautiful glassmorphism to-do list app with dark & light themes, rich settings and offline support." />
+  <meta name="theme-color" id="metaThemeColor" content="#0b1020" />
+  <title>TaskGlass — To-Do, Beautifully Done</title>
+  <meta name="description" content="TaskGlass — a beautiful glassmorphism to-do app with dark & light themes, rich settings and offline support." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>✅</text></svg>" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -21,7 +22,7 @@
     <aside class="sidebar glass" id="sidebar">
       <div class="brand">
         <div class="brand-logo">✓</div>
-        <div class="brand-name">TaskGlass</div>
+        <div class="brand-name">TaskGlass<small>beautifully done</small></div>
       </div>
 
       <div class="progress-card glass-inner">
@@ -38,11 +39,11 @@
       </div>
 
       <nav class="nav" id="nav">
-        <button class="nav-item active" data-view="all"><span class="nav-ico">🗂️</span> All Tasks <span class="count" id="countAll">0</span></button>
+        <button class="nav-item active" data-view="all"><span class="nav-ico">📋</span> All Tasks <span class="count" id="countAll">0</span></button>
         <button class="nav-item" data-view="today"><span class="nav-ico">📅</span> Today <span class="count" id="countToday">0</span></button>
-        <button class="nav-item" data-view="upcoming"><span class="nav-ico">🚀</span> Upcoming <span class="count" id="countUpcoming">0</span></button>
+        <button class="nav-item" data-view="upcoming"><span class="nav-ico">🗓️</span> Upcoming <span class="count" id="countUpcoming">0</span></button>
         <button class="nav-item" data-view="important"><span class="nav-ico">⭐</span> Important <span class="count" id="countImportant">0</span></button>
-        <button class="nav-item" data-view="completed"><span class="nav-ico">🎉</span> Completed <span class="count" id="countCompleted">0</span></button>
+        <button class="nav-item" data-view="completed"><span class="nav-ico">✅</span> Completed <span class="count" id="countCompleted">0</span></button>
       </nav>
 
       <div class="sidebar-section-label">Categories</div>
@@ -60,7 +61,7 @@
     <!-- ============ MAIN ============ -->
     <main class="main">
       <header class="topbar">
-        <button class="icon-btn mobile-menu" id="btnSidebarToggle" aria-label="Toggle menu">☰</button>
+        <button class="icon-btn mobile-menu" id="btnSidebarToggle" aria-label="Open menu">☰</button>
         <div class="topbar-title">
           <h1 id="viewTitle">All Tasks</h1>
           <p class="topbar-sub" id="viewDate"></p>
@@ -68,9 +69,10 @@
         <div class="topbar-actions">
           <div class="search-wrap glass-inner">
             <span class="search-ico">🔍</span>
-            <input type="text" id="searchInput" placeholder="Search tasks..." autocomplete="off" />
+            <input type="text" id="searchInput" placeholder="Search tasks…  (press /)" autocomplete="off" aria-label="Search tasks" />
           </div>
-          <select id="sortSelect" class="select glass-inner" title="Sort tasks">
+          <button class="btn btn-ghost" id="btnClearDone" style="display:none" title="Delete all completed tasks">🧹 <span>Clear done</span></button>
+          <select id="sortSelect" class="select glass-inner" title="Sort tasks" aria-label="Sort tasks">
             <option value="manual">Sort: Manual</option>
             <option value="created-desc">Newest first</option>
             <option value="created-asc">Oldest first</option>
@@ -103,11 +105,11 @@
 
       <div class="empty-state" id="emptyState">
         <div class="empty-ico">🌤️</div>
-        <h3>Nothing here yet</h3>
-        <p>Add your first task and start being awesome.</p>
+        <h3 id="emptyTitle">Nothing here yet</h3>
+        <p id="emptyText">Add your first task and start being awesome.</p>
       </div>
 
-      <button class="fab" id="btnAddTask" title="Add task (N)">＋</button>
+      <button class="fab" id="btnAddTask" title="Add task (N)" aria-label="Add task">＋</button>
     </main>
   </div>
 
@@ -122,7 +124,7 @@
         <input type="hidden" id="taskId" />
         <label class="field">
           <span>Task title *</span>
-          <input type="text" id="taskTitle" placeholder="What needs to be done?" required maxlength="120" />
+          <input type="text" id="taskTitle" placeholder="e.g. Buy milk tomorrow morning" required maxlength="120" />
         </label>
         <label class="field">
           <span>Notes</span>
@@ -186,18 +188,18 @@
   <div class="modal-overlay" id="settingsModal">
     <div class="modal modal-lg glass">
       <div class="modal-head">
-        <h2>⚙️ Settings</h2>
+        <h2>Settings</h2>
         <button class="icon-btn" data-close="settingsModal">✕</button>
       </div>
       <div class="modal-body settings-body">
 
         <section class="settings-group">
-          <h3>🎨 Appearance</h3>
+          <h3>Appearance</h3>
 
           <div class="setting-row">
             <div class="setting-info">
               <label for="setTheme">Theme</label>
-              <small>Switch between dark & white theme</small>
+              <small>Dark, white — or follow your system</small>
             </div>
             <div class="segmented" id="setTheme">
               <button data-value="dark">🌙 Dark</button>
@@ -292,7 +294,7 @@
         </section>
 
         <section class="settings-group">
-          <h3>🧭 Behaviour</h3>
+          <h3>Behaviour</h3>
 
           <div class="setting-row">
             <div class="setting-info">
@@ -366,7 +368,7 @@
           <div class="setting-row">
             <div class="setting-info">
               <label for="setWeek">Week starts on</label>
-              <small>Used in date labels</small>
+              <small>Controls the "This week" due label</small>
             </div>
             <select id="setWeek">
               <option value="1">Monday</option>
@@ -376,7 +378,7 @@
         </section>
 
         <section class="settings-group">
-          <h3>💾 Data</h3>
+          <h3>Data</h3>
           <div class="setting-row actions-row">
             <div class="setting-info">
               <label>Backup & restore</label>
