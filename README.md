@@ -5,6 +5,10 @@ A beautiful, fully-functional to-do list web app with a **water-glass (frosted g
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![No dependencies](https://img.shields.io/badge/dependencies-0-blue.svg)
 
+## 🔗 Live Demo
+
+**https://melleeyyy.github.io/taskglass-todo-app/**
+
 ## ✨ Features
 
 ### Tasks
@@ -21,6 +25,8 @@ A beautiful, fully-functional to-do list web app with a **water-glass (frosted g
 - 🎉 Confetti celebration on completing a task
 - ⏰ Optional browser notifications for due tasks
 - 🔊 Soft sound effects (WebAudio — no audio files needed)
+- 🧹 Clear-all-completed button
+- ⌨️ Shortcuts: N new task, / search, Esc close
 
 ### ⚙️ Settings (everything adjustable)
 | Setting | Options |
@@ -49,10 +55,9 @@ All settings persist in `localStorage` — nothing leaves your device.
 
 The app is 100% static, so any free static host works:
 
-### GitHub Pages (recommended)
-1. Fork or push this repo to GitHub.
-2. Repo → **Settings → Pages** → Source: **Deploy from a branch** → Branch: `main`, folder `/ (root)` → Save.
-3. Your app goes live at `https://<username>.github.io/<repo>/` in ~1 minute.
+### GitHub Pages (already enabled for this repo ✅)
+- This repository deploys automatically from the `main` branch: **https://melleeyyy.github.io/taskglass-todo-app/**
+- For a fork/copy: Repo → **Settings → Pages** → Source: **Deploy from a branch** → Branch: `main`, folder `/ (root)` → Save.
 
 ### Netlify (drag & drop)
 1. Go to [netlify.com](https://netlify.com) → drag the repo folder onto the dashboard.
