@@ -59,12 +59,8 @@ The app is 100% static, so any free static host works:
 - This repository deploys automatically from the `main` branch: **https://melleeyyy.github.io/taskglass-todo-app/**
 - For a fork/copy: Repo → **Settings → Pages** → Source: **Deploy from a branch** → Branch: `main`, folder `/ (root)` → Save.
 
-### Netlify (drag & drop)
-1. Go to [netlify.com](https://netlify.com) → drag the repo folder onto the dashboard.
-2. Done — instant free HTTPS URL. (A `netlify.toml` is included.)
-
-### Vercel
-1. Import the repo at [vercel.com](https://vercel.com) — zero config (`vercel.json` included).
+### Other hosts
+Any other free static host (Netlify, Vercel, Cloudflare Pages…) also works — just import or drag-and-drop the repo; no config needed.
 
 ## 🛠️ Run locally
 Just open `index.html` in any modern browser, or:
@@ -80,8 +76,6 @@ python3 -m http.server
 ├── css/style.css       # Glassmorphism design system (dark/light themes)
 ├── js/app.js           # All logic (CRUD, filters, settings, storage)
 ├── LICENSE             # MIT
-├── netlify.toml        # Netlify config
-├── vercel.json         # Vercel config
 └── .nojekyll           # Ensure GitHub Pages serves files as-is
 ```
 
